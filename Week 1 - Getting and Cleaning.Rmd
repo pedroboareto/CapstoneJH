@@ -1,0 +1,66 @@
+---
+title: "Week 1 - Getting, Cleaning and Sampling"
+author: "Pedro Boareto"
+date: "23/07/2020"
+output: html_document
+---
+#Getting
+**Blog Data**
+```{r}
+blogs <- readLines("final/en_US/en_US.blogs.txt", encoding = "UTF-8")
+```
+**News Data**
+```{r}
+news <- readLines(con <- file("final/en_US/en_US.news.txt", open = "rb"), encoding = "UTF-8")
+```
+**Twitter Data**
+```{r}
+twitter <- readLines("./final/en_US/en_US.twitter.txt", encoding = "UTF-8")
+```
+**Correcting environment**
+```{r}
+close(con)
+rm(con)
+```
+#Cleaning
+**Libraries**
+```{r}
+library(stringi)
+```
+**Blog Data**
+```{r}
+save(blogs, file="blogs.RData")
+```
+**News Data**
+```{r}
+save(news, file="news.RData")
+```
+**Twitter Data**
+```{r}
+twitter <- iconv(twitter, from = "latin1", to = "UTF-8", sub="")
+twitter <- stri_replace_all_regex(twitter, "\u2019|`","'") 
+twitter <- stri_replace_all_regex(twitter, "\u201c|\u201d|u201f|``",'"')
+save(twitter, file="twitter.RData")
+```
+
+#Sampling
+Following the 2nd hint
+**Blog Data**
+```{r}
+load("blogs.RData")
+sample_blogs <- sample(blogs, 1000)
+```
+**News Data**
+```{r}
+load("news.RData")
+sample_news <- sample(news, 1000)
+```
+**Twitter Data**
+```{r}
+load("twitter.RData")
+sample_twitter <- sample(twitter, 1000)
+```
+*Merge*
+```{r}
+save(sample_blogs, sample_news, sample_twitter, file= "sample_data.RData")
+```
