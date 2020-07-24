@@ -5,70 +5,52 @@ date: "23/07/2020"
 output: html_document
 ---
 #Exploratory Analysis
+**Libraries**
 ```{r}
 library(stringi); library(ggplot2)
 ```
-
+**Basic Exploratory Analysis - Blogs**
 ```{r}
 summary(nchar(blogs))
 stats_blogs   <- stri_stats_general(blogs)
 words_blogs   <- stri_count_words(blogs)
 summary(words_blogs)
-qplot(words_blogs)
 ```
-
+**Basic Exploratory Analysis - News**
 ```{r}
 summary(nchar(news))
 words_news <- stri_count_words(news)
 stats_news <- stri_stats_general(news)
 summary(words_news)
-qplot(words_news)
 ```
-
+**Basic Exploratory Analysis - Twitter**
 ```{r}
 summary(nchar(twitter))
 stats_twitter <- stri_stats_general(twitter)
 words_twitter <- stri_count_words(twitter)
 summary(words_twitter)
-qplot(words_twitter)
 ```
 
-# Questions
+**questions**
 01. Some words are more frequent than others - what are the distributions of word frequencies?
 02. What are the frequencies of 2-grams and 3-grams in the dataset?
 03. How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
 04. How do you evaluate how many of the words come from foreign languages?
 05. Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
-06. How can you efficiently store an n-gram model (think Markov Chains)?
-07. How can you use the knowledge about word frequencies to make your model smaller and more efficient?
-08. How many parameters do you need (i.e. how big is n in your n-gram model)?
-09. Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
-10. How do you evaluate whether your model is any good?
-11. How can you use backoff models to estimate the probability of unobserved n-grams?
 
-#Modelling
+#Modelling - PART 1
+**Libraries**
 ```{r}
 library(tm); library(RWeka); library(dplyr); library(magrittr)
 ```
-
+**Loading Files**
 ```{r}
 # load data
-load("blogs.RData")
-load("news.RData")
-load("twitter.RData")
-
-# sample data (100,000 of each)
-sample_blogs   <- sample(blogs, 1000)
-sample_news    <- sample(news, 1000)
-sample_twitter <- sample(twitter, 1000)
-
-# save samples
-save(sample_blogs, sample_news, sample_twitter, file= "sample_data.RData")
+load("blogs.RData"); load("news.RData"); load("twitter.RData"); load("sample_blogs.RData"); load("sample_news.RData"); load("sample_twitter.RData")
 ```
-  
+**Corpus construct - Blogs**
 ```{r}
 # contruct single corpus from sample data
-sample_blogs <- sample(blogs, 1000)
 sample_blogs <- data.frame(sample_blogs)
 sample_blogs <- sample_blogs %>% mutate(doc_id = row_number())
 sample_blogs <- sample_blogs[c("doc_id","sample_blogs")]
@@ -76,8 +58,9 @@ sample_blogs <- rename(sample_blogs,text=sample_blogs)
 sample_blogs <- DataframeSource(sample_blogs)
 sample_blogs <- VCorpus(sample_blogs)
 vc_blogs <- tm_map(sample_blogs, stripWhitespace)
-
-sample_news <- sample(news, 1000)
+```
+**Corpus construct - News**
+```{r}
 sample_news <- data.frame(sample_news)
 sample_news <- sample_news %>% mutate(doc_id = row_number())
 sample_news <- sample_news[c("doc_id","sample_news")]
@@ -85,54 +68,72 @@ sample_news <- rename(sample_news,text=sample_news)
 sample_news <- DataframeSource(sample_news)
 sample_news <- VCorpus(sample_news)
 vc_news <- tm_map(sample_news, stripWhitespace)
-
-sample_twitter <- sample(twitter, 1000)
+```
+**Corpus construct - Twitter**
+```{r}
 sample_twitter <- data.frame(sample_twitter)
-sample_twitter <- sample_twitter %>% mutate(doc_id = row_number())
+sample_twitter <- mutate(sample_twitter, doc_id = row_number())
 sample_twitter <- sample_twitter[c("doc_id","sample_twitter")]
 sample_twitter <- rename(sample_twitter,text=sample_twitter)
 sample_twitter <- DataframeSource(sample_twitter)
 sample_twitter <- VCorpus(sample_twitter)
 vc_twitter <- tm_map(sample_twitter, stripWhitespace)
-
-sample_twitter <- sample(twitter, 1000)
-
+```
+**Mergeing Corpus**REVER ###############################
+```{r}
+######save(sample_blogs, sample_news, sample_twitter, file= "sample_data.RData") #USA MESMO??????????
 vc_all <- c(vc_blogs, vc_news, vc_twitter)
 ```
 
+#Modelling - PART 2
+**Createing Bi-gram token** REVER ###############################
+```{r}
+##### ngram tokaniser
+#####bigram_token <- function(x) NGramTokenizer(x, Weka_control(min = 2L, max = 2L))
+```
+**Createing Tri-gram token**
+```{r}
+trigram_token <- function(x) NGramTokenizer(x, Weka_control(min = 3L, max = 3L))
+```
+**aaaaaaaaaaaaaaaaaaaaaaaaa** REVER ###############################
+```{r}
+# check length function
+length_is <- function(n) function(x) length(x)==n #USA MESMO??????????
+```
+**Makeing unigram levels**
 ```{r}
 # frequency unigrams
-tdm_unigram <- vc_all %>% TermDocumentMatrix( control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf)))
-
+tdm_unigram <- vc_all %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf)))
 freq_unigram <- tdm_unigram %>% as.matrix %>% rowSums
-
 # write all unigrams to a list
 # in order to create uniform levels of factors
 unigram_levels <- unique(tdm_unigram$dimnames$Terms)
-
+```
+**Makeing trigram levels**
+```{r}
 # trigram Term-Document Matrix
 tdm_trigram <- vc_all %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf), tokenize = trigram_token))
-
 # aggregate frequencies
-tdm_trigram %>%
-  as.matrix %>%
-  rowSums -> freq_trigram
-
+tdm_trigram %>% as.matrix %>% rowSums -> freq_trigram
 # repeat by frequency
-freq_trigram %<>%
-  names %>%
-  rep( times = freq_trigram )
-
+freq_trigram %<>% names %>% rep(times = freq_trigram)
 # split the trigram into three columns
-freq_trigram %<>%
-  strsplit(split=" ")
-
+freq_trigram %<>% strsplit(split=" ")
 # filter out those of less than three columns
 freq_trigram <- do.call(rbind, Filter(length_is(3), freq_trigram))
-
 # transform to data.frame encode as factors
 df_trigram <- data.frame(X1 = factor(freq_trigram[,1], levels = unigram_levels),X2 = factor(freq_trigram[,2], levels = unigram_levels),Y  = factor(freq_trigram[,3], levels = unigram_levels))
-
-# save data frame
-save( df_trigram, unigram_levels, file = "df_trigram.RData")
 ```
+**Saving n-grans for prediction**
+```{r}
+# save data frame
+save(df_trigram, unigram_levels, file = "df_trigram.RData")
+```
+
+**Questions**
+06. How can you efficiently store an n-gram model (think Markov Chains)?
+07. How can you use the knowledge about word frequencies to make your model smaller and more efficient?
+08. How many parameters do you need (i.e. how big is n in your n-gram model)?
+09. Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
+10. How do you evaluate whether your model is any good?
+11. How can you use backoff models to estimate the probability of unobserved n-grams?
