@@ -1,0 +1,143 @@
+---
+title: "Week 2 - Milestone Report"
+author: "Pedro Boareto"
+date: "25/07/2020"
+output: html_document
+---
+#Introduction
+This milestone report provides a summary about the actual status from the project what includes:
+1.Loading Data and libs
+2.Sampling the Data
+3.Summaring the Data (Understanding)
+4.Cleaning the Data
+5.Creating a Corpus for the Data Mining
+6.Creating the Uni_gran
+7.Creating the Tri_gran
+
+This project is based in the US_en archives from three text files from blogs, news and twitter.
+
+#Loading Data and libs
+This section is just about reading the raw files and encoding to UTF-8 (a binary codification that we can use to process the data and also can understand what is written)
+Also I display all the libs we will use here:
+a.Stringi is THE R package for fast, correct, consistent, and convenient string/text manipulation. 
+b.ggplot2: IS a system for 'declaratively' creating graphics
+c.tm: is the text mining package
+d.RWeka:  is a collection of machine learning algorithms for data mining tasks 
+e.dplyr: is a package for data manipulation
+f.magrittr: is a package offers a set of operators which promote semantics
+```{r, echo=TRUE}
+blogs <- readLines("final/en_US/en_US.blogs.txt", encoding = "UTF-8")
+news <- readLines(con <- file("final/en_US/en_US.news.txt", open = "rb"), encoding = "UTF-8")
+twitter <- readLines("./final/en_US/en_US.twitter.txt", encoding = "UTF-8")
+
+library(stringi); library(ggplot2); library(tm); library(RWeka); library(dplyr); library(magrittr)
+```
+
+#Sampling Data
+As show at the global environment box, the blog has 899288 elements, news has 1010242 elements and twitter has 2360148. So we will filter 1000 wors for each dataset to do in the next weeks a fastest algorithm
+```{r, echo=TRUE}
+sample_blogs <- sample(blogs, 1000)
+sample_news <- sample(news, 1000)
+sample_twitter <- sample(twitter, 1000)
+```
+
+#Summaring Data
+The two functions used here are for:
+a. stri_stats_general: gives general statistics for a character vector
+b. stri_count_words: determine the number of text boundaries(character, word, line, or sentence bountaries) in a string
+```{r, echo=TRUE}
+stats_blogs   <- stri_stats_general(blogs)
+words_blogs   <- stri_count_words(blogs)
+words_news <- stri_count_words(news)
+stats_news <- stri_stats_general(news)
+stats_twitter <- stri_stats_general(twitter)
+words_twitter <- stri_count_words(twitter)
+```
+So we summary the results collected from the preview stage. Also we count the number of characters from the sets
+```{r, echo=TRUE}
+summary(nchar(blogs))
+summary(nchar(news))
+summary(nchar(twitter))
+summary(words_blogs)
+summary(words_news)
+summary(words_twitter)
+View(sample_blogs)
+View(sample_news)
+View(sample_twitter)
+```
+#Pre-Cleaning Data
+Looking at the data we can se Twitter need some character replaces. To do that we first use iconv to convert a character vector to another encoding using defining which character string will be replaced
+Also we use the classical regex function in the stringi package to replace all elements that will conplicate the evaluation for the algorithm
+The regex arguments can be find at: https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html
+```{r,echo=TRUE}
+twitter <- iconv(twitter, from = "latin1", to = "UTF-8", sub="")
+twitter <- stri_replace_all_regex(twitter, "\u2019|`","'") 
+twitter <- stri_replace_all_regex(twitter,"\u201c|\u201d|u201f|``",'"')
+```
+
+#Creating a Corpus
+Now the follow stages happen:
+1. Convert the sample to a data frame
+2., 3., 4. Prepare the sample to be a dataframe source
+5. Convert in a data frame source
+6. Convert the sambple to a corpus
+7. Transform the corpus excluding the extra spaces
+And after do it for the three datasets we merge it in one dataset becouse as we can assume. The language used in twitter blogs and news are different. So if we merge all the three we are able to do a better prediction
+```{r, echo=TRUE}
+sample_blogs <- data.frame(sample_blogs)
+sample_blogs <- sample_blogs %>% mutate(doc_id = row_number())
+sample_blogs <- sample_blogs[c("doc_id","sample_blogs")]
+sample_blogs <- rename(sample_blogs,text=sample_blogs)
+sample_blogs <- DataframeSource(sample_blogs)
+sample_blogs <- VCorpus(sample_blogs)
+vc_blogs <- tm_map(sample_blogs, stripWhitespace)
+
+sample_news <- data.frame(sample_news)
+sample_news <- sample_news %>% mutate(doc_id = row_number())
+sample_news <- sample_news[c("doc_id","sample_news")]
+sample_news <- rename(sample_news,text=sample_news)
+sample_news <- DataframeSource(sample_news)
+sample_news <- VCorpus(sample_news)
+vc_news <- tm_map(sample_news, stripWhitespace)
+
+sample_twitter <- data.frame(sample_twitter)
+sample_twitter <- mutate(sample_twitter, doc_id = row_number())
+sample_twitter <- sample_twitter[c("doc_id","sample_twitter")]
+sample_twitter <- rename(sample_twitter,text=sample_twitter)
+sample_twitter <- DataframeSource(sample_twitter)
+sample_twitter <- VCorpus(sample_twitter)
+vc_twitter <- tm_map(sample_twitter, stripWhitespace)
+#merging
+vc <- c(vc_blogs, vc_news, vc_twitter)
+```
+
+#Uni-gram levels construct
+Now we create the Uni-gram values. This stage will be used to help the prediction in the future algorithm.
+We use a TermDocumentMatrix, to construct the merged dataset into a matrix. At this moment we also use the control parameter to do a better cleaning
+Next we sum the colluns in each row and apply it's terms in a dataframe wicth remove duplicate elements 
+```{r, echo=TRUE}
+tdm_unigram <- vc %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf)))
+freq_unigram <- tdm_unigram %>% as.matrix %>% rowSums
+unigram_levels <- unique(tdm_unigram$dimnames$Terms)
+```
+
+#Setting Tri-gram in a data-frame
+Here we first create a token for the trigran using the weka tokenizer
+So we do the same we do at the unigram. But this time we count the tokenize parameter
+Also, in the and we combine the unigram levels and the 3 levels from the trigram into a merged dataset
+```{r, echo=TRUE}
+trigram_token <- function(x) NGramTokenizer(x, Weka_control(min = 3L, max = 3L))
+tdm_trigram <- vc %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf), tokenize = trigram_token))
+tdm_trigram %>% as.matrix %>% rowSums -> freq_trigram
+freq_trigram %<>% names %>% rep(times = freq_trigram)
+freq_trigram %<>% strsplit(split=" ")
+length_is <- function(n) function(x) length(x)==n 
+freq_trigram <- do.call(rbind, Filter(length_is(3), freq_trigram))
+df_trigram <- data.frame(X1 = factor(freq_trigram[,1], levels = unigram_levels),X2 = factor(freq_trigram[,2], levels = unigram_levels),Y  = factor(freq_trigram[,3], levels = unigram_levels))
+```
+#Next steps
+
+This concludes the exploratory analysis. As a next step a model will be created and integrated into a Shiny app for word prediction.
+
+We will use the Tri-gran dataframe becouse it's better then the bigran.
+Also the shiny web app will be simple as possible becouse it's visual doesn't not aggregate value and the focus of this job is be the simples and clear as possible
