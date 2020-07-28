@@ -12,22 +12,24 @@ library(e1071)
 **Loading preview data**
 ```{r}
 # load the trigram data
-load("df_trigram.RData"); load("tri_naiveBayes.RData")
+load("df_trigram.RData")
 ```
 
 **Presetting Algorithm**
 ```{r}
-tri_naiveBayes <- naiveBayes(Y ~ X1 + X2, df_trigram)
-save(tri_naiveBayes, unigram_levels, file = "tri_naiveBayes.RData")
+Bayes <- naiveBayes(Y ~ X1 + X2, df_tri)
+save(Bayes, uni_levels, file = "Bayes.RData")
 ```
 
 **Testing Prediction**
 ```{r}
-test_string <- "How are"  # Input test variable
-test_split <- strsplit(test_string, split = " " )# split it into separate words
-test_factor <- factor(unlist(test_split), levels=unigram_levels)# encode as a factor using the same levels
-test_df <- data.frame(X1 = test_factor[1], X2 = test_factor[2])# transform to data frame
-predict(tri_naiveBayes, test_df)# estimate using the model
+string <- "I love"  # Input test variable
+split <- strsplit(string, split = " " )# split it into separate words
+factor <- factor(unlist(split), levels=uni_levels)# encode as a factor using the same levels
+df <- data.frame(X1 = factor[1], X2 = factor[2])# transform to data frame
+pred <- predict(Bayes, df)# estimate using the model
+pred <- as.character(pred)
+pred
 ```
 
 **Questions**

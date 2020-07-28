@@ -1,0 +1,70 @@
+---
+title: "SwiftKey - Data Science Capstone"
+author: "Pedro Boareto"
+date: "31/07/2020"
+output: ioslides_presentation
+---
+
+## The problem
+
+Around the world, **people are spending an increasing amount of time on their mobile devices** for email, social networking, banking and a whole range of other activities.
+So to be able to **text faster** and can be able to **do other things** or even to text more we promote a **next word prevision**.
+
+**But why?**
+We do that to in a next step apply this algorithm in smartphones, emails or even for better fills from missing data.
+
+
+## The predictive model solution
+Third we apply a Naive Bayes classificator as follow:
+     - a.we first split the input phrase into words and apply to it as two factors as as variables to predict
+     - b.them we use our preset dataframe from tri-grans as preditor
+     - c.them we apply Naive Bayes using (a) and (b) and the result is the most possible word.
+     
+**But why Naive Bayes?**
+This algorithm is one of the most simple and clear statistical classificators. And as a predict model of words, this is nothing more then a probabilistic model. So using Bayes theorem is the most clear solution.
+
+## The algorithm performance
+```{r, echo=FALSE}
+load("tri_naiveBayes.RData")
+```
+
+```{r, echo=FALSE}
+library(e1071)
+library(tictoc)
+tic("Sleeping")
+test_string <- "do you"  # Input test variable
+test_split <- strsplit(test_string, split = " " )# split it into separate words
+test_factor <- factor(unlist(test_split), levels=unigram_levels)# encode as a factor using the same levels
+test_df <- data.frame(X1 = test_factor[1], X2 = test_factor[2])# transform to data frame
+prediction <- predict(tri_naiveBayes, test_df)# estimate using the model
+prediction <- as.character(prediction)
+value1 <- toc()
+test_string
+prediction
+```
+
+```{r, echo=FALSE}
+tic("Sleeping")
+test_string <- "I want"  # Input test variable
+test_split <- strsplit(test_string, split = " " )# split it into separate words
+test_factor <- factor(unlist(test_split), levels=unigram_levels)# encode as a factor using the same levels
+test_df <- data.frame(X1 = test_factor[1], X2 = test_factor[2])# transform to data frame
+prediction <- predict(tri_naiveBayes, test_df)# estimate using the model
+prediction <- as.character(prediction)
+value1 <- toc()
+test_string
+prediction
+```
+## The app
+
+The app for this demonstration is just a block where you input your phrase and bellow it shows the predict next word
+
+The app can be tested at: [app link](https://boareto.shinyapps.io/week5_product/)
+
+
+**For more infos**
+
+All the codes can be found at:[git link](https://github.com/pedroboareto/CapstoneJH)
+
+
+

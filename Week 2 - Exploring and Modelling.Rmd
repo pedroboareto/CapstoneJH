@@ -57,7 +57,7 @@ sample_blogs <- sample_blogs[c("doc_id","sample_blogs")]
 sample_blogs <- rename(sample_blogs,text=sample_blogs)
 sample_blogs <- DataframeSource(sample_blogs)
 sample_blogs <- VCorpus(sample_blogs)
-vc_blogs <- tm_map(sample_blogs, stripWhitespace)
+vblogs <- tm_map(sample_blogs, stripWhitespace)
 ```
 **Corpus construct - News**
 ```{r}
@@ -67,7 +67,7 @@ sample_news <- sample_news[c("doc_id","sample_news")]
 sample_news <- rename(sample_news,text=sample_news)
 sample_news <- DataframeSource(sample_news)
 sample_news <- VCorpus(sample_news)
-vc_news <- tm_map(sample_news, stripWhitespace)
+vnews <- tm_map(sample_news, stripWhitespace)
 ```
 **Corpus construct - Twitter**
 ```{r}
@@ -77,57 +77,53 @@ sample_twitter <- sample_twitter[c("doc_id","sample_twitter")]
 sample_twitter <- rename(sample_twitter,text=sample_twitter)
 sample_twitter <- DataframeSource(sample_twitter)
 sample_twitter <- VCorpus(sample_twitter)
-vc_twitter <- tm_map(sample_twitter, stripWhitespace)
+vtwitter <- tm_map(sample_twitter, stripWhitespace)
 ```
 **Mergeing Corpus**REVER ###############################
 ```{r}
 ######save(sample_blogs, sample_news, sample_twitter, file= "sample_data.RData") #USA MESMO??????????
-vc_all <- c(vc_blogs, vc_news, vc_twitter)
+vtotal <- c(vblogs, vnews, vtwitter)
 ```
 
 #Modelling - PART 2
-**Createing Bi-gram token** REVER ###############################
-```{r}
-##### ngram tokaniser
-#####bigram_token <- function(x) NGramTokenizer(x, Weka_control(min = 2L, max = 2L))
-```
 **Createing Tri-gram token**
 ```{r}
-trigram_token <- function(x) NGramTokenizer(x, Weka_control(min = 3L, max = 3L))
+n=3L
+tri_token <- function(x) NGramTokenizer(x, Weka_control(min = n, max = n))
 ```
 **aaaaaaaaaaaaaaaaaaaaaaaaa** REVER ###############################
 ```{r}
 # check length function
-length_is <- function(n) function(x) length(x)==n #USA MESMO??????????
+ls <- function(n) function(x) length(x)==n 
 ```
 **Makeing unigram levels**
 ```{r}
 # frequency unigrams
-tdm_unigram <- vc_all %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf)))
-freq_unigram <- tdm_unigram %>% as.matrix %>% rowSums
+tdm_uni <- vtotal %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf)))
+f_uni <- tdm_uni %>% as.matrix %>% rowSums
 # write all unigrams to a list
 # in order to create uniform levels of factors
-unigram_levels <- unique(tdm_unigram$dimnames$Terms)
+uni_levels <- unique(tdm_uni$dimnames$Terms)
 ```
 **Makeing trigram levels**
 ```{r}
 # trigram Term-Document Matrix
-tdm_trigram <- vc_all %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf), tokenize = trigram_token))
+tdm_tri <- vtotal %>% TermDocumentMatrix(control = list(removePunctuation = TRUE, removeNumbers = TRUE, wordLengths = c( 1, Inf), tokenize = tri_token))
 # aggregate frequencies
-tdm_trigram %>% as.matrix %>% rowSums -> freq_trigram
+tdm_tri %>% as.matrix %>% rowSums -> f_tri
 # repeat by frequency
-freq_trigram %<>% names %>% rep(times = freq_trigram)
+f_tri %<>% names %>% rep(times = f_tri)
 # split the trigram into three columns
-freq_trigram %<>% strsplit(split=" ")
+f_tri %<>% strsplit(split=" ")
 # filter out those of less than three columns
-freq_trigram <- do.call(rbind, Filter(length_is(3), freq_trigram))
+f_tri <- do.call(rbind, Filter(ls(3), f_tri))
 # transform to data.frame encode as factors
-df_trigram <- data.frame(X1 = factor(freq_trigram[,1], levels = unigram_levels),X2 = factor(freq_trigram[,2], levels = unigram_levels),Y  = factor(freq_trigram[,3], levels = unigram_levels))
+df_tri <- data.frame(X1 = factor(f_tri[,1], levels = uni_levels),X2 = factor(f_tri[,2], levels = uni_levels),Y  = factor(f_tri[,3], levels = uni_levels))
 ```
 **Saving n-grans for prediction**
 ```{r}
 # save data frame
-save(df_trigram, unigram_levels, file = "df_trigram.RData")
+save(df_tri, uni_levels, file = "df_tri.RData")
 ```
 
 **Questions**
